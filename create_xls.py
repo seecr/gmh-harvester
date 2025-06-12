@@ -6,18 +6,19 @@ from pathlib import Path
 from openpyxl import Workbook
 
 from meresco.harvester.repositorystatus import RepositoryStatus
-from meresco.harvester.harvestdata import HarvestData
+from meresco.harvester.harvesterdata import HarvesterData
 
 
 def main(state_path, log_path, data_path, target_path, domain_id):
+    harvester_data = HarvesterData(dataPath=data_path)
     repository_status = RepositoryStatus(logPath=log_path, statePath=state_path)
-    harvester_data = HarvestData(dataPath=data_path)
+    repository_status.addObserver(harvester_data)
+
     for status in repository_status.getStatus(domainId=domain_id):
         repository_id = status["repositoryId"]
-        invalid_record_ids = repository_status.invalidRecords(domainId, repository_id)
+        invalid_record_ids = list(repository_status.invalidRecords(domain_id, repository_id))
 
         repository_data = harvester_data.getRepository(repository_id, domain_id)
-
         if len(invalid_record_ids) > 0:
 
             # Create workbook
@@ -41,7 +42,7 @@ def main(state_path, log_path, data_path, target_path, domain_id):
                     "//diag:diagnostic/diag:details/text()",
                     namespaces={"diag": "http://www.loc.gov/zing/srw/diagnostic/"},
                 )
-                get_record_url = "%(baseurl)s?%s".format(
+                get_record_url = "{}?{}".format(
                     repository_data["baseurl"],
                     urlencode(
                         dict(
@@ -58,7 +59,7 @@ def main(state_path, log_path, data_path, target_path, domain_id):
             if max_col > 0:
                 ws.column_dimensions["A"].width = max_col
 
-            filename = target_path / f"{domain_id}_{repository_id}.xsls"
+            filename = target_path / f"{domain_id}_{repository_id}.xlsx"
             tmp_filename = filename.with_suffix(".tmp")
             try:
                 wb.save(tmp_filename)

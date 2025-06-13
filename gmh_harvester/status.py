@@ -29,4 +29,4 @@ def status(
     ):
         with tag("i.bi.bi-graph-up.pe-2"):
             yield ""
-        yield "Status"
+        yield "GMH Status"

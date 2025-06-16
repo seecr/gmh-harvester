@@ -112,7 +112,7 @@ if __name__ == "__main__":
         "--target-path", type=Path, required=True, help="Path to store XLS files"
     )
     parser.add_argument(
-        "--domain_id", type=str, required=True, help="Domain to generate XLS files for"
+        "--domain-id", type=str, required=True, help="Domain to generate XLS files for"
     )
 
     args = parser.parse_args()

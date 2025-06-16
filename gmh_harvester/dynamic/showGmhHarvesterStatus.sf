@@ -162,7 +162,7 @@ def _contents(tag, arguments, session, **kwargs):
                                     "a",
                                     target="_blank",
                                     href="{}/rss?{}".format(
-                                        API_SERVER,
+                                        api_server,
                                         urlencode(
                                             dict(
                                                 domainId=domainId, repositoryId=repositoryId

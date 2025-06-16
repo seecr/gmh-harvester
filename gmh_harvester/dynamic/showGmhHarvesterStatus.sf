@@ -133,7 +133,7 @@ def _contents(tag, arguments, session, **kwargs):
                                     yield "{} error{}".format(errorsnr, "s" if errorsnr != 1 else "")
                         with tag("td.link"):
                             if nrOfValidationErrors > 0:
-                                with tag("a", href="{}/xls?{}".format(API_SERVER, urlencode(dict(rid=repositoryId)))):
+                                with tag("a", href="{}/xls/{}_{}.xlsx".format(API_SERVER, domainId,repositoryId)):
                                     yield "Excel spreadsheet"
 
     with tag("div"):

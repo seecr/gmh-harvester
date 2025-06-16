@@ -27,7 +27,11 @@ import importlib.resources as pkg_resources
 
 dynamic_path = (pkg_resources.files(__package__) / "dynamic").as_posix()
 securezone_excluded = ["/showGmhHarvesterStatus"]
-additionalGlobals = {"API_SERVER": "https://api.acc.kb.seecr.nl"}
+additionalGlobals = {
+    "API_SERVERS": {
+        "kb-acc": "https://api.acc.kb.seecr.nl",
+    }
+}
 
 from .status import status
 

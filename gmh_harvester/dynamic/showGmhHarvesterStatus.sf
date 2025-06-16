@@ -29,22 +29,24 @@ import page2 as page
 
 def main(**kwargs):
 
-    if kwargs['path'].endswith('/js'):
+    if kwargs["path"].endswith("/js"):
         yield js(**kwargs)
         return
-    yield page.render(_contents, showLogin=False, 
-        additionalCss=[
-          "/css/jquery-tablesorter/theme.default.css"
-        ], 
+    yield page.render(
+        _contents,
+        showLogin=False,
+        additionalCss=["/css/jquery-tablesorter/theme.default.css"],
         additionalScripts=[
             "/js/jquery-tablesorter/jquery.tablesorter.min.js",
-            '/showGmhHarvesterStatus/js',
-        ], **kwargs)
+            "/showGmhHarvesterStatus/js",
+        ],
+        **kwargs,
+    )
 
 
 def js(**kwargs):
-    yield 'HTTP/1.0 200 Ok\r\nContent-Type: text/javascript; charset=utf-8\r\n\r\n'
-    yield '''
+    yield "HTTP/1.0 200 Ok\r\nContent-Type: text/javascript; charset=utf-8\r\n\r\n"
+    yield """
 $.tablesorter.addParser({
         // set a unique id
         id: 'errors',
@@ -70,20 +72,26 @@ $("table").tablesorter({
             sortList: [[0,0]],
             sortInitialOrder: "desc"
         });
-'''
+"""
 
 
 def xpath(node, path):
-    return node.xpath(path, namespaces={'diag': 'http://www.loc.gov/zing/srw/diagnostic/'})
+    return node.xpath(
+        path, namespaces={"diag": "http://www.loc.gov/zing/srw/diagnostic/"}
+    )
 
 
 def _contents(tag, arguments, session, **kwargs):
-    domainId = arguments.get('domainId', [None])[0]
-    repositoryGroupId = arguments.get('repositoryGroupId', [None])[0]
-    repositoryId = arguments.get('repositoryId', [None])[0]
-    statuses = observable.call.getStatus(domainId=domainId, repositoryGroupId=repositoryGroupId, repositoryId=repositoryId)
+    domainId = arguments.get("domainId", [None])[0]
+    repositoryGroupId = arguments.get("repositoryGroupId", [None])[0]
+    repositoryId = arguments.get("repositoryId", [None])[0]
+    statuses = observable.call.getStatus(
+        domainId=domainId,
+        repositoryGroupId=repositoryGroupId,
+        repositoryId=repositoryId,
+    )
 
-    invalid = dict([(status.get('repositoryId'), status) for status in statuses])
+    invalid = dict([(status.get("repositoryId"), status) for status in statuses])
 
     with tag("h1"):
         yield "Gemeenschappelijke Metadata Harvester Validation Report"
@@ -101,58 +109,119 @@ def _contents(tag, arguments, session, **kwargs):
 
         with tag("table.table-sm.table.table-hover.event.tablesorter"):
             with tag("thead"):
-                for label in ["Repository", "Last successful harvest", "Total records", "#Validation Errors", "Normalisation log", "Download validation errors"]:
+                for label in [
+                    "Repository",
+                    "Last successful harvest",
+                    "Total records",
+                    "#Validation Errors",
+                    "Normalisation log",
+                    "Download validation errors",
+                ]:
                     with tag("th.text-start"):
                         yield label
-                
-            with tag("tbody"): 
-                for status in sorted(statuses, key=lambda s: (s.get('repositoryGroupId', '').lower(), s.get('repositoryId'))):
-                    repositoryId = status.get('repositoryId')
-                    repositoryGroupId = status.get('repositoryGroupId')
-                    errorsnr = int(status.get('totalerrors', 0))
-                    lastHarvestDate = status.get('lastHarvestDate') or ''
+
+            with tag("tbody"):
+                for status in sorted(
+                    statuses,
+                    key=lambda s: (
+                        s.get("repositoryGroupId", "").lower(),
+                        s.get("repositoryId"),
+                    ),
+                ):
+                    repositoryId = status.get("repositoryId")
+                    repositoryGroupId = status.get("repositoryGroupId")
+                    errorsnr = int(status.get("totalerrors", 0))
+                    lastHarvestDate = status.get("lastHarvestDate") or ""
                     if lastHarvestDate:
                         lastHarvestDate = ZuluTime(lastHarvestDate).local()
 
-                    style=errorsnr and 'style="font-weight:bold"' or ''
+                    style = errorsnr and 'style="font-weight:bold"' or ""
                     with tag("tr.table_row"):
-                        with tag("td.link", style=style): yield repositoryId
-                        with tag("td", style=style): yield lastHarvestDate
-                        with tag("td"): yield str(status.get('total', 0) or '')
+                        with tag("td.link", style=style):
+                            yield repositoryId
+                        with tag("td", style=style):
+                            yield lastHarvestDate
+                        with tag("td"):
+                            yield str(status.get("total", 0) or "")
                         with tag("td.link"):
-                            nrOfValidationErrors = int(invalid[repositoryId].get('invalid') or '0') if repositoryId in invalid else 0
+                            nrOfValidationErrors = (
+                                int(invalid[repositoryId].get("invalid") or "0")
+                                if repositoryId in invalid
+                                else 0
+                            )
                             if nrOfValidationErrors > 0:
                                 with tag("b"):
-                                    yield "{} error{}".format(nrOfValidationErrors, 's' if nrOfValidationErrors != 1 else '')
+                                    yield "{} error{}".format(
+                                        nrOfValidationErrors,
+                                        "s" if nrOfValidationErrors != 1 else "",
+                                    )
                         with tag("td.link"):
-                            with tag("a", target="_blank", href="{}/rss?{}".format(API_SERVER, urlencode(dict(domainId=domainId, repositoryId=repositoryId))), caption=escapeHtml(repositoryId)):
-                                yield "RSS-feed"
+                            api_server = API_SERVERS.get(domainId)
+                            if api_server:
+                                with tag(
+                                    "a",
+                                    target="_blank",
+                                    href="{}/rss?{}".format(
+                                        API_SERVER,
+                                        urlencode(
+                                            dict(
+                                                domainId=domainId, repositoryId=repositoryId
+                                            )
+                                        ),
+                                    ),
+                                    caption=escapeHtml(repositoryId),
+                                ):
+                                    yield "RSS-feed"
+                            else:
+                                yield f"Geen RRS-feed voor {domainId} gedefinieerd"
+
+                            yield " "
 
                             if errorsnr:
-                                with tag("a", name=f"top_{repositoryId}", href=f"#{repositoryId}"):
-                                    yield "{} error{}".format(errorsnr, "s" if errorsnr != 1 else "")
+                                with tag(
+                                    "a",
+                                    name=f"top_{repositoryId}",
+                                    href=f"#{repositoryId}",
+                                ):
+                                    yield "{} error{}".format(
+                                        errorsnr, "s" if errorsnr != 1 else ""
+                                    )
                         with tag("td.link"):
                             if nrOfValidationErrors > 0:
-                                with tag("a", href="{}/xls/{}_{}.xlsx".format(API_SERVER, domainId,repositoryId)):
+                                with tag(
+                                    "a", href=f"/xls/{domainId}_{repositoryId}.xlsx"
+                                ):
                                     yield "Excel spreadsheet"
 
     with tag("div"):
         with tag("h3"):
             yield "Validatie Errors"
 
-        total_invalid = sum(status['invalid'] for status in statuses)
+        total_invalid = sum(status["invalid"] for status in statuses)
         if total_invalid == 0:
             yield "Geen invalide records"
         else:
-            with tag("table.event", width="100%", cellspacing="0", cellpadding="0", border="0"):
+            with tag(
+                "table.event",
+                width="100%",
+                cellspacing="0",
+                cellpadding="0",
+                border="0",
+            ):
                 for status in statuses:
-                    repositoryId = status.get('repositoryId')
-                    repository = observable.call.getRepository(identifier=repositoryId, domainId=domainId)
-                    invalidnr = int(status.get('invalid') or '0')
+                    repositoryId = status.get("repositoryId")
+                    repository = observable.call.getRepository(
+                        identifier=repositoryId, domainId=domainId
+                    )
+                    invalidnr = int(status.get("invalid") or "0")
                     if invalidnr:
                         with tag("tr.eventinfo"):
                             with tag("td", colspan="2"):
-                                with tag("a", name=repositoryId, href="#top_{}".format(repositoryId)):
+                                with tag(
+                                    "a",
+                                    name=repositoryId,
+                                    href="#top_{}".format(repositoryId),
+                                ):
                                     yield repositoryId
                         with tag("tr"):
                             with tag("td"):
@@ -162,16 +231,30 @@ def _contents(tag, arguments, session, **kwargs):
                             with tag("td"):
                                 yield "Validation Error Message"
 
-                        invalidIds = status.get('recentinvalids', [])
+                        invalidIds = status.get("recentinvalids", [])
                         for invalidId in invalidIds:
                             recordId = invalidId.split(":", 1)[-1]
-                            invalidRecord = observable.call.getInvalidRecord(domainId, repositoryId, recordId)
-                            diagnosticsDetails = xpath(invalidRecord, '//diag:diagnostic/diag:details/text()')[0]
-                            invalidRecordLink="{}?{}".format(repository.get('baseurl'), urlencode(dict(verb="GetRecord", identifier=recordId, metadataPrefix=repository.get('metadataPrefix'))))
+                            invalidRecord = observable.call.getInvalidRecord(
+                                domainId, repositoryId, recordId
+                            )
+                            diagnosticsDetails = xpath(
+                                invalidRecord, "//diag:diagnostic/diag:details/text()"
+                            )[0]
+                            invalidRecordLink = "{}?{}".format(
+                                repository.get("baseurl"),
+                                urlencode(
+                                    dict(
+                                        verb="GetRecord",
+                                        identifier=recordId,
+                                        metadataPrefix=repository.get("metadataPrefix"),
+                                    )
+                                ),
+                            )
                             with tag("tr"):
                                 with tag("td.link"):
-                                    with tag("a", href=invalidRecordLink, target="_blank"):
+                                    with tag(
+                                        "a", href=invalidRecordLink, target="_blank"
+                                    ):
                                         yield recordId
                                 with tag("td"):
                                     yield diagnosticsDetails
-

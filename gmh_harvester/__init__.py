@@ -30,6 +30,7 @@ securezone_excluded = ["/showGmhHarvesterStatus"]
 additionalGlobals = {
     "API_SERVERS": {
         "kb-acc": "https://api.acc.kb.seecr.nl",
+        "kb-prod": "https://api.kb.seecr.nl",
     }
 }
 

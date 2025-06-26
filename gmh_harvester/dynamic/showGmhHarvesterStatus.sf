@@ -169,7 +169,7 @@ def _contents(tag, arguments, session, **kwargs):
                                             )
                                         ),
                                     ),
-                                    caption=escapeHtml(repositoryId),
+                                    caption=repositoryId,
                                 ):
                                     yield "RSS-feed"
                             else:

@@ -26,18 +26,21 @@
 import importlib.resources as pkg_resources
 
 dynamic_path = (pkg_resources.files(__package__) / "dynamic").as_posix()
-securezone_excluded = ["/showGmhHarvesterStatus"]
+securezone_excluded = []
 additionalGlobals = {
     "API_SERVERS": {
         "kb-acc": "https://api.acc.kb.seecr.nl",
         "kb-prod": "https://api.kb.seecr.nl",
+        "prod10": "https://example.org",
     }
 }
 
-from .status import status
+from .status import Status
+
+_status = Status(api_servers=additionalGlobals["API_SERVERS"])
 
 hooks = {
-    "status.domain": status,
-    "status.repositoryGroup": status,
-    "status.repository": status,
+    "status.display.invalid": _status.display_invalid,
+    "status.rss.domain": _status.rss_domain,
+    "status.rss.repository": _status.rss_repository,
 }

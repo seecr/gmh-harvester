@@ -1,0 +1,102 @@
+## begin license ##
+#
+# Gemeenschappelijke Metadata Harvester (GMH) uitbreidingen
+#
+# Copyright (C) 2025 Koninklijke Bibliotheek (KB) https://www.kb.nl
+# Copyright (C) 2025 Seecr (Seek You Too B.V.) https://seecr.nl
+#
+# This file is part of "GMH-Harvester-Addon"
+#
+# "GMH-Harvester-Addon" is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# "GMH-Harvester-Addon" is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with "GMH-Harvester-Addon"; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+#
+## end license ##
+
+import page2
+
+
+def main(**kwargs):
+    yield page2.render(content, showRss=False, **kwargs)
+
+
+def content(tag, arguments, **kwargs):
+    domainId = arguments.get("domainId", [None])[0]
+    repositoryId = arguments.get("repositoryId", [None])[0]
+    try:
+        statuses = observable.call.getStatus(
+            domainId=domainId,
+            repositoryId=repositoryId,
+        )
+    except ValueError:
+        statuses = []
+    if len(statuses) != 1:
+        with tag("p"):
+            yield f"Geen validatiefouten gevonden voor {repositoryId!r}"
+        return
+
+    status = statuses[0]
+    invalidnr = int(status.get("invalid") or "0")
+    if not invalidnr:
+        with tag("p"):
+            yield f"Geen validatiefouten gevonden voor {repositoryId!r}"
+        return
+    with tag(
+        "table.event",
+        width="100%",
+        cellspacing="0",
+        cellpadding="0",
+        border="0",
+    ):
+        repository = observable.call.getRepository(
+            identifier=repositoryId, domainId=domainId
+        )
+        with tag("tr.eventinfo"):
+            with tag("td", colspan="2"):
+                with tag(
+                    "b",
+                ):
+                    yield repositoryId
+        with tag("tr"):
+            with tag("td"):
+                yield "Nr. of validation errors: "
+                with tag("strong"):
+                    yield invalidnr
+            with tag("td"):
+                yield "Validation Error Message"
+
+        invalidIds = status.get("recentinvalids", [])
+        for invalidId in invalidIds:
+            recordId = invalidId.split(":", 1)[-1]
+            invalidRecord = observable.call.getInvalidRecord(
+                domainId, repositoryId, recordId
+            )
+            diagnosticsDetails = xpathFirst(
+                invalidRecord, "//diag:diagnostic/diag:details/text()"
+            )
+            invalidRecordLink = "{}?{}".format(
+                repository.get("baseurl"),
+                urlencode(
+                    dict(
+                        verb="GetRecord",
+                        identifier=recordId,
+                        metadataPrefix=repository.get("metadataPrefix"),
+                    )
+                ),
+            )
+            with tag("tr"):
+                with tag("td.link"):
+                    with tag("a", href=invalidRecordLink, target="_blank"):
+                        yield recordId
+                with tag("td"):
+                    yield diagnosticsDetails

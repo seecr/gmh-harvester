@@ -55,3 +55,60 @@ def status(
         with tag("i.bi.bi-graph-up.pe-2"):
             yield ""
         yield "GMH Status"
+
+
+def thousands(number):
+    return format(number, ",d").replace(",", ".")
+
+
+class Status:
+    def __init__(self, api_servers):
+        self.api_servers = api_servers
+
+    def display_invalid(self, tag, observable, count, domainId, repositoryId):
+        if count == 0:
+            yield "0"
+            return
+        with tag(
+            "a.btn.btn-warning.py-0",
+            href="/invalid_status?"
+            + urlencode(dict(domainId=domainId, repositoryId=repositoryId)),
+            title="Bekijk 10 meest recente validatie fouten",
+        ):
+            with tag("i.bi.bi-eye-fill.pe-1"):
+                yield ""
+            yield f" {thousands(count)}"
+        yield " "
+        with tag(
+            "a.btn.btn-warning.py-0",
+            href=f"/xls/{domainId}_{repositoryId}.xlsx",
+            title="Download Excelsheet",
+        ):
+            with tag("i.bi.bi-filetype-xls.pe-1"):
+                yield ""
+            yield f" {thousands(count)}"
+
+    def rss_domain(self, tag, observable, original_domainId):
+        with tag("div"):
+            yield ""
+
+    def rss_repository(
+        self, tag, observable, original_domainId, repositoryGroupId, repositoryId
+    ):
+        api_server = self.api_servers.get(original_domainId)
+        if not api_server:
+            with tag("span", title=f"Geen RSS gedefinieerd voor {original_domainId!r}"):
+                yield "Geen RSS"
+            return
+
+        with tag(
+            "a.btn.btn-light",
+            href="{}/rss?{}".format(
+                api_server,
+                urlencode(dict(domainId=original_domainId, repositoryId=repositoryId)),
+            ),
+            caption=repositoryId,
+            target="_blank",
+        ):
+            with tag("i.bi.bi-rss"):
+                pass

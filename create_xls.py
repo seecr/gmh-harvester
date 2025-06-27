@@ -34,13 +34,34 @@ from openpyxl import Workbook
 from meresco.harvester.repositorystatus import RepositoryStatus
 from meresco.harvester.harvesterdata import HarvesterData
 
+import json
 
-def main(state_path, log_path, data_path, target_path, domain_id):
+
+def write_nr_xls_to_gustos(domain_id, xls_count, gustos_count_path):
+    if not gustos_count_path:
+        return
+    gustos_count_path.parent.mkdir(parents=True, exist_ok=True)
+    current_data = {}
+    if gustos_count_path.is_file():
+        current_data = json.loads(gustos_count_path.read_text())
+    xls = current_data.setdefault("GMH Harvester XLS", {})
+    domain_info = xls.setdefault(f"Domain {domain_id}", {})
+    prev_run_count = domain_info.get("nr_of_runs", {"count": 0})["count"]
+    domain_info["nr_of_runs"] = {"count": prev_run_count + 1}
+    domain_info["nr_of_xls"] = {"count": xls_count}
+    tmp = gustos_count_path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(current_data))
+    tmp.rename(gustos_count_path)
+
+
+def main(state_path, log_path, data_path, target_path, domain_id, gustos_count_path):
     harvester_data = HarvesterData(dataPath=data_path)
     repository_status = RepositoryStatus(logPath=log_path, statePath=state_path)
     repository_status.addObserver(harvester_data)
 
+    xls_count = 0
     for status in repository_status.getStatus(domainId=domain_id):
+        xls_count += 1
         repository_id = status["repositoryId"]
         invalid_record_ids = list(
             repository_status.invalidRecords(domain_id, repository_id)
@@ -94,6 +115,8 @@ def main(state_path, log_path, data_path, target_path, domain_id):
             finally:
                 tmp_filename.rename(filename)
 
+    write_nr_xls_to_gustos(domain_id, xls_count, gustos_count_path)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -114,7 +137,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--domain-id", type=str, required=True, help="Domain to generate XLS files for"
     )
-
+    parser.add_argument(
+        "--gustos-count-path", type=Path, help="File path to store Gustos count"
+    )
     args = parser.parse_args()
 
     main(**vars(args))
